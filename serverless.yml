@@ -1,0 +1,99 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: copaco
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: pruebas-tecnicas
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: serverless-fullstack-rimac
+
+plugins:
+  - serverless-dotenv-plugin
+
+stages:
+  default:
+    params:
+      tableName: "planets-table-${sls:stage}"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - Fn::GetAtt: [PlanetsTable, Arn]
+  environment:
+    PLANETS_TABLE: ${param:tableName}
+    stage: ${opt:stage, 'dev'}
+    BASE_URL: ${env:BASE_URL}
+
+functions:
+  getStarship:
+    handler: src/handlers/starshipHandler.handler
+    events:
+      - http:
+          path: /starship/{starshipId}
+          method: get
+          cors: 
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+  getVehicle:
+    handler: src/handlers/vehicleHandler.handler
+    events:
+      - http:
+          path: /vehicle/{vehicleId}
+          method: get
+          cors: 
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+  createPlanet:
+    handler: src/handlers/planetHandler.handler
+    events:
+      - http:
+          path: /create-planet
+          method: post
+          cors: 
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+
+resources:
+  Resources:
+    PlanetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: planetId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: planetId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${param:tableName}
